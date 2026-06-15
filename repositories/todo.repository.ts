@@ -1,10 +1,10 @@
 import { surreal } from "@/lib/surreal";
-import { todos } from "@/tables/todo";
+import { todo_table } from "@/tables/todo";
 import { Todo } from "@/types/todo";
 
 export async function createTodo(title: string) {
   const db = await surreal();
-  const result = await db.create<Todo>(todos).content({
+  const result = await db.create<Todo>(todo_table).content({
     title,
     completed: false,
     createdAt: new Date().toISOString(),
@@ -23,6 +23,16 @@ export async function createTodo(title: string) {
 
 export async function listTodo() {
   const db = await surreal();
-  const result = await db.select<Todo>(todos);
-  return result;
+
+  const result = await db.select<Todo>(todo_table);
+
+  const rows = Array.isArray(result) ? result : [];
+
+  return rows.map((todo) => ({
+    id: String(todo?.id),
+    title: String(todo?.title ?? ""),
+    completed: Boolean(todo?.completed),
+    createdAt: String(todo?.createdAt ?? ""),
+    updatedAt: String(todo?.updatedAt ?? ""),
+  }));
 }

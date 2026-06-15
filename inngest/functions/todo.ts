@@ -1,4 +1,7 @@
+import { surreal } from "@/lib/surreal";
 import { inngest } from "../client";
+import { todo_stats_table } from "@/tables/todo";
+import { CountQueryResult } from "@/types/count";
 
 export const todoCreated = inngest.createFunction(
   {
@@ -10,18 +13,30 @@ export const todoCreated = inngest.createFunction(
     ],
   },
   async ({ event, step }) => {
-    await step.run("activity", async () => {
-      console.log("Todo dibuat:", event.data.title);
-    });
+    await step.run("update-stats", async () => {
+      const db = await surreal();
+      const res = await db.query<CountQueryResult>(`
+  SELECT count() AS total FROM todo GROUP ALL;
+`);
 
-    await step.run("statistics", async () => {
-      console.log("Update statistik");
-    });
+      const total = res?.[0]?.[0]?.total ?? 0;
 
-    await step.sleep("for-a-second", "30s");
+      const stats = await db.select(todo_stats_table);
+      const current = Array.isArray(stats) ? stats[0] : stats;
 
-    await step.run("reminder", async () => {
-      console.log("Reminder:", event.data.title);
+      if (current) {
+        await db.update(current.id).content({
+          total,
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        await db.create(todo_stats_table).content({
+          total,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      return true;
     });
   },
 );

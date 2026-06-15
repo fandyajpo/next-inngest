@@ -5,3 +5,8 @@ export interface Todo {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface TodoStats {
+  total: number;
+  updatedAt: string;
+}
